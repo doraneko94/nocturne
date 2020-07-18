@@ -1,6 +1,7 @@
-use std::collections::{VecDeque, HashMap};
+use std::collections::HashMap;
 
 use crate::code::*;
+use crate::io::*;
 
 const DIRS: [(i32, i32); 8] = [( -1, -1), ( -1,  0), ( -1,  1),
                                (  0, -1),            (  0,  1),
@@ -15,7 +16,6 @@ pub enum Status {
 
 pub struct Game {
     pub codes: Codes,
-    pub past: VecDeque<Codes>,
     pub history: HashMap<Codes, usize>,
 }
 
@@ -27,9 +27,8 @@ impl Game {
             &[25, 26, 27, 28, 29],
             &[ 0,  0,  0,  0,  0],
         );
-        let past = VecDeque::from(vec![Codes::from_int(-1, -1, -1, -1); 8]);
         let history = HashMap::new();
-        Game { codes, past, history }
+        Game { codes, history }
     }
 
     pub fn init(&mut self) {
@@ -39,7 +38,6 @@ impl Game {
             &[25, 26, 27, 28, 29],
             &[ 0,  0,  0,  0,  0],
         );
-        self.past = VecDeque::from(vec![Codes::from_int(-1, -1, -1, -1); 8]);
         self.history = HashMap::new();
     }
 
@@ -50,6 +48,21 @@ impl Game {
             println!("| {:3} | {:3} | {:3} | {:3} | {:3} |", v[5*i], v[5*i+1], v[5*i+2], v[5*i+3], v[5*i+4]);
         }
         println!("-------------------------------");
+    }
+
+    pub fn next(&mut self, dir: usize) -> Result<Status, ()> {
+        match self.is_valid(self.codes, dir) {
+            Ok((Status::OnGoing, codes)) => {
+                self.move_unchecked(codes);
+                Ok(Status::OnGoing)
+            }
+            Ok((s, _)) => Ok(s),
+            Err(_) => Err(()),
+        }
+    }
+
+    pub fn move_unchecked(&mut self, codes: Codes) {
+        self.codes = codes;
     }
 
     pub fn is_valid(&self, mut codes: Codes, dir: usize) -> Result<(Status, Codes), ()> {
@@ -84,10 +97,10 @@ impl Game {
         let mut s0 = -1;
         let mut s1 = -1;
         for i in 0..5 {
-            if codes.w_step.get_point(i) == p0 { s0 += 1; }
-            if codes.b_step.get_point(i) == p0 { s0 += 1; }
-            if codes.w_step.get_point(i) == p1 { s1 += 1; }
-            if codes.b_step.get_point(i) == p1 { s1 += 1; }
+            if codes.w_pos.get_point(i) == p0 { s0 += 1; }
+            if codes.b_pos.get_point(i) == p0 { s0 += 1; }
+            if codes.w_pos.get_point(i) == p1 { s1 += 1; }
+            if codes.b_pos.get_point(i) == p1 { s1 += 1; }
         }
         if s0 > step.get_point(obj) || s1 > 1 { return Err(()) }
         match turn {
@@ -102,10 +115,23 @@ impl Game {
                 codes.sort(Color::Black);
             }
         };
+        codes.next_turn();
         match self.history.get(&codes) {
             Some(&t) => { if t >= 2 { return Ok((Status::Draw, codes)); } }
             None => (),
         };
         Ok((Status::OnGoing, codes))
+    }
+
+    pub fn player_move(&mut self) -> Result<Status, ()> {
+        self.view();
+        match self.codes.to_turn() {
+            Color::White => { println!("White, Move: "); }
+            Color::Black => { println!("Black, Move: "); }
+        }
+        let v = readn::<usize>(" ");
+        if v.len() < 2 { return Err(()); }
+        let dir = v[0] * 8 + v[1];
+        self.next(dir)
     }
 }

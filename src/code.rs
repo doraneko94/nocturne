@@ -75,8 +75,8 @@ impl Code for i16 {
 impl TurnCode for i16 {
     fn next_turn(&mut self) {
         match self.to_turn() {
-            Color::White => { *self -= 1 << 10; }
-            Color::Black => { *self += 1 << 10; }
+            Color::White => { *self += 1 << 10; }
+            Color::Black => { *self -= 1 << 10; }
         }
     }
 
