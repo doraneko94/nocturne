@@ -28,6 +28,11 @@ pub trait TurnCode {
     fn to_turn(&self) -> Color;
 }
 
+pub trait CountCode {
+    fn set_count(&mut self, count: u8);
+    fn to_count(&self) -> u8;
+}
+
 impl Code for i32 {
     fn get_point(&self, id: usize) -> i32 {
         (self >> id * 5) % 32
@@ -86,6 +91,18 @@ impl TurnCode for i16 {
             1 => Color::Black,
             _ => panic!(),
         }
+    }
+}
+
+impl CountCode for i16 {
+    fn set_count(&mut self, count: u8) {
+        let c = self.to_count();
+        *self -= (c as i16) << 10;
+        *self += (count as i16) << 10;
+    }
+
+    fn to_count(&self) -> u8 {
+        ((*self >> 10) % 4) as u8
     }
 }
 
@@ -176,5 +193,13 @@ impl Codes {
 
     pub fn to_turn(&self) -> Color {
         self.w_step.to_turn()
+    }
+
+    pub fn set_count(&mut self, count: u8) {
+        self.b_step.set_count(count);
+    }
+
+    pub fn to_count(&self) -> u8 {
+        self.b_step.to_count()
     }
 }

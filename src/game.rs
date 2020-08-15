@@ -14,9 +14,22 @@ pub enum Status {
     OnGoing,
 }
 
+pub trait History {
+    fn add_count(&mut self, code: Codes);
+}
+
+impl History for HashMap<Codes, u8> {
+    fn add_count(&mut self, codes: Codes) {
+        let mut c = codes;
+        c.set_count(0);
+        let count = self.entry(c).or_insert(0);
+        *count += 1;
+    }
+}
+
 pub struct Game {
     pub codes: Codes,
-    pub history: HashMap<Codes, usize>,
+    pub history: HashMap<Codes, u8>,
 }
 
 impl Game {
@@ -27,7 +40,8 @@ impl Game {
             &[25, 26, 27, 28, 29],
             &[ 0,  0,  0,  0,  0],
         );
-        let history = HashMap::new();
+        let mut history = HashMap::new();
+        history.add_count(codes);
         Game { codes, history }
     }
 
@@ -54,6 +68,7 @@ impl Game {
         match self.is_valid(self.codes, dir) {
             Ok((Status::OnGoing, codes)) => {
                 self.move_unchecked(codes);
+                self.history.add_count(codes);
                 Ok(Status::OnGoing)
             }
             Ok((s, _)) => Ok(s),
@@ -117,8 +132,13 @@ impl Game {
         };
         codes.next_turn();
         match self.history.get(&codes) {
-            Some(&t) => { if t >= 2 { return Ok((Status::Draw, codes)); } }
-            None => (),
+            Some(&t) => {
+                codes.set_count(t);
+                if t >= 2 {
+                    return Ok((Status::Draw, codes));
+                }
+            }
+            None => { codes.set_count(0) },
         };
         Ok((Status::OnGoing, codes))
     }
